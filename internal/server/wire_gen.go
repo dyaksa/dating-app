@@ -9,6 +9,9 @@ package server
 import (
 	"github.com/dyaksa/dating-app/internal/app/http/route"
 	"github.com/dyaksa/dating-app/internal/config"
+	"github.com/dyaksa/dating-app/internal/modules/auth/v1/delivery"
+	"github.com/dyaksa/dating-app/internal/modules/auth/v1/repository"
+	"github.com/dyaksa/dating-app/internal/modules/auth/v1/usecase"
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 )
@@ -16,7 +19,11 @@ import (
 // Injectors from injector.go:
 
 func InitializeServer() *gin.Engine {
-	configRoute := route.NewRoute()
+	db := config.NewPostgres()
+	repositoryRepository := repository.NewAuthRepository(db)
+	authusecase := usecase.NewAuthUsecaseImpl(repositoryRepository)
+	restAuthHandler := delivery.NewRestAuthHandler(authusecase)
+	configRoute := route.NewRoute(restAuthHandler)
 	engine := config.NewApp(configRoute)
 	return engine
 }
@@ -24,3 +31,9 @@ func InitializeServer() *gin.Engine {
 // injector.go:
 
 var configSet = wire.NewSet(config.NewPostgres)
+
+var repositorySet = wire.NewSet(repository.NewAuthRepository)
+
+var usecaseSet = wire.NewSet(usecase.NewAuthUsecaseImpl)
+
+var handlerSet = wire.NewSet(delivery.NewRestAuthHandler)
