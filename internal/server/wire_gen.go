@@ -7,11 +7,18 @@
 package server
 
 import (
+	"github.com/dyaksa/dating-app/internal/app/http/middleware"
 	"github.com/dyaksa/dating-app/internal/app/http/route"
 	"github.com/dyaksa/dating-app/internal/config"
 	"github.com/dyaksa/dating-app/internal/modules/auth/v1/delivery"
 	"github.com/dyaksa/dating-app/internal/modules/auth/v1/repository"
 	"github.com/dyaksa/dating-app/internal/modules/auth/v1/usecase"
+	delivery3 "github.com/dyaksa/dating-app/internal/modules/purchases/v1/delivery"
+	repository3 "github.com/dyaksa/dating-app/internal/modules/purchases/v1/repository"
+	usecase3 "github.com/dyaksa/dating-app/internal/modules/purchases/v1/usecase"
+	delivery2 "github.com/dyaksa/dating-app/internal/modules/swipes/v1/delivery"
+	repository2 "github.com/dyaksa/dating-app/internal/modules/swipes/v1/repository"
+	usecase2 "github.com/dyaksa/dating-app/internal/modules/swipes/v1/usecase"
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 )
@@ -19,11 +26,18 @@ import (
 // Injectors from injector.go:
 
 func InitializeServer() *gin.Engine {
+	middlewareAuthMiddleware := middleware.NewAuthMiddleware()
 	db := config.NewPostgres()
 	repositoryRepository := repository.NewAuthRepository(db)
 	authusecase := usecase.NewAuthUsecaseImpl(repositoryRepository)
 	restAuthHandler := delivery.NewRestAuthHandler(authusecase)
-	configRoute := route.NewRoute(restAuthHandler)
+	repository4 := repository2.NewSwipesRepository(db)
+	swipeUsecase := usecase2.NewSwipeUsecase(repository4)
+	restSwipesHandler := delivery2.NewRestSwipesHandler(swipeUsecase)
+	repository5 := repository3.NewPurchasesRepository(db)
+	purchasesUsecase := usecase3.NewPurchasesUsecase(repository5)
+	restPurchasesHandler := delivery3.NewRestPurchasesHandler(purchasesUsecase)
+	configRoute := route.NewRoute(middlewareAuthMiddleware, restAuthHandler, restSwipesHandler, restPurchasesHandler)
 	engine := config.NewApp(configRoute)
 	return engine
 }
@@ -32,8 +46,10 @@ func InitializeServer() *gin.Engine {
 
 var configSet = wire.NewSet(config.NewPostgres)
 
-var repositorySet = wire.NewSet(repository.NewAuthRepository)
+var repositorySet = wire.NewSet(repository.NewAuthRepository, repository2.NewSwipesRepository, repository3.NewPurchasesRepository)
 
-var usecaseSet = wire.NewSet(usecase.NewAuthUsecaseImpl)
+var usecaseSet = wire.NewSet(usecase.NewAuthUsecaseImpl, usecase2.NewSwipeUsecase, usecase3.NewPurchasesUsecase)
 
-var handlerSet = wire.NewSet(delivery.NewRestAuthHandler)
+var handlerSet = wire.NewSet(delivery.NewRestAuthHandler, delivery2.NewRestSwipesHandler, delivery3.NewRestPurchasesHandler)
+
+var authMiddleware = wire.NewSet(middleware.NewAuthMiddleware)
