@@ -1,7 +1,7 @@
 include .env
 
 MIGRATE=migrate
-DATABASE_URL=postgres://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable
+DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable
 
 # Nama direktori tempat file migrasi disimpan
 MIGRATIONS_DIR=migrations

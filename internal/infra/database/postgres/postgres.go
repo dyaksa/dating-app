@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -24,23 +25,34 @@ func (i *DBInstance) Instance() interface{} {
 }
 
 func dbInit() interface{} {
-	dbHost := os.Getenv("DB_HOST")
-	dbPort := os.Getenv("DB_PORT")
-	dbUser := os.Getenv("DB_USER")
-	dbPass := os.Getenv("DB_PASS")
-	dbName := os.Getenv("DB_NAME")
-	db, err := sql.Open("postgres", fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", dbHost, dbPort, dbUser, dbPass, dbName))
-	if err != nil {
-		os.Exit(1)
+	maxRetries := 5
+	var db *sql.DB
+	var err error
+
+	for i := 0; i < maxRetries; i++ {
+		dbHost := os.Getenv("DB_HOST")
+		dbPort := os.Getenv("DB_PORT")
+		dbUser := os.Getenv("DB_USER")
+		dbPass := os.Getenv("DB_PASSWORD")
+		dbName := os.Getenv("DB_NAME")
+		db, err = sql.Open("postgres", fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", dbHost, dbPort, dbUser, dbPass, dbName))
+		if err != nil {
+			time.Sleep(5 * time.Second)
+			continue
+		}
+
+		if err := db.Ping(); err == nil {
+			return db
+		}
+
 		db.Close()
+
+		if i < maxRetries-1 {
+			time.Sleep(5 * time.Second)
+		}
 	}
 
-	if err := db.Ping(); err != nil {
-		os.Exit(1)
-		db.Close()
-	}
-
-	return db
+	return nil
 }
 
 func Connect() *sql.DB {
